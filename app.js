@@ -23,10 +23,19 @@ let scanTimer = null;
 let lastLoggedText = "";
 let isProcessingFrame = false;
 
+// ĐỒNG BỘ VỊ TRÍ CHUẨN: Tính toán dựa trên chiều cao thực tế của khung hiển thị video
 function syncSubtitlePosition() {
-    const barBottom = blurLayer.style.bottom || window.getComputedStyle(blurLayer).bottom;
-    const barHeight = parseFloat(window.getComputedStyle(blurLayer).height);
-    liveSubText.style.bottom = barBottom;
+    const videoHeight = mainVideo.offsetHeight || 300; 
+    const percentY = parseFloat(sliderY.value);
+    const barHeight = parseFloat(sliderHeight.value);
+
+    // Tính toán lại vị trí từ đáy lên chính xác theo tỷ lệ màn hình điện thoại
+    const bottomPx = (percentY / 100) * videoHeight;
+    
+    blurLayer.style.bottom = bottomPx + 'px';
+    blurLayer.style.height = barHeight + 'px';
+    
+    liveSubText.style.bottom = bottomPx + 'px';
     liveSubText.style.height = barHeight + 'px';
 }
 
@@ -77,16 +86,24 @@ videoFileInput.addEventListener('change', function() {
         mainVideo.src = URL.createObjectURL(this.files[0]);
         uploadText.innerHTML = `Đã nhận: <span style="color:#22c55e">${this.files[0].name}</span>`;
         mainVideo.muted = true;
+        // Đợi video tải xong rồi đồng bộ vị trí ngay
+        setTimeout(syncSubtitlePosition, 500);
     }
 });
 
 mainVideo.addEventListener('loadedmetadata', syncSubtitlePosition);
+window.addEventListener('resize', syncSubtitlePosition);
 
-// --- XỬ LÝ SỰ KIỆN KÉO THẢ (TOUCH & MOUSE) ---
-let isDragging = false, isResizing = false, yStart, startBottom, startHeight;
+// --- XỬ LÝ KÉO TAY TRÊN MOBILE CHUẨN XÁC ---
+let isDragging = false, isResizing = false, yStart, startPercentY, startHeight;
 function getClientY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
 
 function actionStart(e, type) {
+    const videoHeight = mainVideo.offsetHeight || 1;
+    yStart = getClientY(e);
+    startPercentY = parseFloat(sliderY.value);
+    startHeight = parseFloat(sliderHeight.value);
+
     if (type === 'resize') {
         isResizing = true;
         e.stopPropagation();
@@ -94,35 +111,32 @@ function actionStart(e, type) {
         if (e.target.id === 'resizeHandle') return;
         isDragging = true;
     }
-    yStart = getClientY(e);
-    startBottom = parseInt(window.getComputedStyle(blurLayer).bottom, 10) || 0;
-    startHeight = parseInt(window.getComputedStyle(blurLayer).height, 10) || 50;
     if(e.cancelable) e.preventDefault();
 }
 
 function actionMove(e) {
     if (!isDragging && !isResizing) return;
+    const videoHeight = mainVideo.offsetHeight || 1;
     let currentY = getClientY(e);
-    let deltaY = yStart - currentY;
+    let deltaY = yStart - currentY; // Vuốt lên là dương, vuốt xuống là âm
 
     if (isDragging) {
-        let targetBottom = startBottom + deltaY;
-        blurLayer.style.bottom = targetBottom + 'px';
-        let maxH = mainVideo.offsetHeight || 1;
-        sliderY.value = Math.min(90, Math.max(0, Math.round((targetBottom / maxH) * 100)));
+        // Đổi deltaPx sang tỷ lệ % của khung video
+        let deltaPercent = (deltaY / videoHeight) * 100;
+        let targetPercent = startPercentY + deltaPercent;
+        sliderY.value = Math.min(90, Math.max(0, Math.round(targetPercent)));
     }
     if (isResizing) {
         let newH = startHeight + deltaY;
-        if(newH > 20 && newH < 200) {
-            blurLayer.style.height = newH + 'px';
-            sliderHeight.value = newH;
+        if(newH > 25 && newH < 150) {
+            sliderHeight.value = Math.round(newH);
         }
     }
     syncSubtitlePosition();
     if(e.cancelable) e.preventDefault();
 }
 
-function actionEnd() { isDragging = false; isResizing = false; syncSubtitlePosition(); }
+function actionEnd() { isDragging = false; isResizing = false; }
 
 blurLayer.addEventListener('mousedown', (e) => actionStart(e, 'drag'));
 document.getElementById('resizeHandle').addEventListener('mousedown', (e) => actionStart(e, 'resize'));
@@ -134,32 +148,27 @@ document.getElementById('resizeHandle').addEventListener('touchstart', (e) => ac
 document.addEventListener('touchmove', actionMove, { passive: false });
 document.addEventListener('touchend', actionEnd);
 
-sliderY.addEventListener('input', function() { blurLayer.style.bottom = this.value + '%'; syncSubtitlePosition(); });
-sliderHeight.addEventListener('input', function() { blurLayer.style.height = this.value + 'px'; syncSubtitlePosition(); });
-syncSubtitlePosition();
+// Lắng nghe thanh trượt thay đổi
+sliderY.addEventListener('input', syncSubtitlePosition);
+sliderHeight.addEventListener('input', syncSubtitlePosition);
+
+// Khởi tạo vị trí ban đầu
+setTimeout(syncSubtitlePosition, 500);
 
 // --- THUẬT TOÁN XỬ LÝ LỌC NHIỄU CHỮ RÁC ---
 function cleanOcrText(text, currentLang) {
     if (!text) return "";
-    
-    // Loại bỏ ký tự đặc biệt, giữ lại chữ Unicode toàn cầu
     let clean = text.replace(/[^\p{L}\p{N}\s]/gu, ' ');
-    
-    // Thuật toán triệt nhiễu Latinh khi đang đọc phụ đề Trung
     if (currentLang === 'chi_sim') {
-        // Tách chuỗi thành từng từ đơn lẻ
         let words = clean.split(/\s+/);
         let filteredWords = words.filter(word => {
-            // Nếu từ chứa ký tự Latinh (A-Z, a-z)
             if (/[a-zA-Z]/.test(word)) {
-                // Chỉ giữ lại nếu từ đó có độ dài lớn (như tên riêng hợp lệ trên phim), loại bỏ các từ nhiễu ngắn 1-4 ký tự
                 return word.length > 4;
             }
-            return true; // Giữ lại toàn bộ chữ Trung Quốc
+            return true;
         });
         clean = filteredWords.join(' ');
     }
-    
     return clean.replace(/\s+/g, ' ').trim();
 }
 
@@ -187,7 +196,7 @@ function playTtsVoice(translatedText) {
     window.speechSynthesis.speak(utterance);
 }
 
-// --- TIẾN TRÌNH QUÉT VIDEO ---
+// --- TIẾN TRÌNH QUÉT VIDEO SỬA ĐỔI TỶ LỆ CẮP ẢNH CHUẨN XÁC ---
 mainVideo.addEventListener('play', () => {
     mainVideo.muted = true;
 
@@ -198,11 +207,12 @@ mainVideo.addEventListener('play', () => {
         canvas.width = mainVideo.videoWidth;
         canvas.height = mainVideo.videoHeight;
 
-        const displayHeight = mainVideo.offsetHeight;
+        const displayHeight = mainVideo.offsetHeight || 1;
+        // Tính tỷ lệ scale giữa độ phân giải gốc của video và độ phân giải hiển thị trên màn hình điện thoại
         const scaleFactor = mainVideo.videoHeight / displayHeight;
 
-        const cropHeight = blurLayer.offsetHeight * scaleFactor;
-        const cropBottom = parseFloat(window.getComputedStyle(blurLayer).bottom) * scaleFactor;
+        const cropHeight = parseFloat(blurLayer.style.height) * scaleFactor;
+        const cropBottom = parseFloat(blurLayer.style.bottom) * scaleFactor;
         const cropTop = mainVideo.videoHeight - cropBottom - cropHeight;
 
         ctx.drawImage(
@@ -213,8 +223,6 @@ mainVideo.addEventListener('play', () => {
 
         try {
             const { data: { text } } = await ocrWorker.recognize(canvas);
-            
-            // Thực thi bộ lọc chống dịch ngu
             let filteredText = cleanOcrText(text, ocrLangSelect.value);
 
             if (filteredText.length >= 1 && filteredText !== lastLoggedText) {
@@ -238,4 +246,3 @@ mainVideo.addEventListener('pause', () => {
     clearInterval(scanTimer);
     if (window.speechSynthesis) window.speechSynthesis.cancel();
 });
-          
