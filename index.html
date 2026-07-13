@@ -46,7 +46,7 @@
             margin-bottom: 25px;
         }
 
-        /* Khu vực upload chuẩn kéo thả */
+        /* Khu vực upload */
         .upload-zone {
             border: 2px dashed #38bdf8;
             background: #0f172a;
@@ -166,7 +166,7 @@
             font-weight: 500;
         }
 
-        /* KHU VỰC KẾT QUẢ GIẢ LẬP (Giống Web Thật) */
+        /* Khu vực chỉnh sửa phụ đề */
         .result-zone {
             margin-top: 25px;
             border-top: 2px dashed #334155;
@@ -266,14 +266,12 @@
         <h2>AI Auto Vietsub Toàn Cầu</h2>
         <div class="subtitle">Hệ thống dịch thuật tự động đa ngôn ngữ bằng công nghệ AI</div>
 
-        <!-- Khu vực Upload bảo mật chống lỗi click ẩn -->
         <div class="upload-zone" id="dropZone">
             <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <p id="uploadText">Click vào đây hoặc Kéo thả video/audio của bạn vào</p>
             <input type="file" id="fileInput" accept="video/*, audio/*">
         </div>
 
-        <!-- Chọn Ngôn Ngữ All Thứ Tiếng -->
         <div class="lang-select-group">
             <div class="select-box">
                 <label>Ngôn ngữ gốc âm thanh</label>
@@ -301,10 +299,8 @@
             </div>
         </div>
 
-        <!-- Nút kích hoạt lệnh -->
         <button class="btn-submit" id="startBtn">Bắt Đầu Tạo Vietsub Ngay</button>
 
-        <!-- Trình chạy trạng thái AI -->
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
@@ -312,7 +308,7 @@
             <div class="status-text" id="statusText">Hệ thống đang chờ lệnh... 0%</div>
         </div>
 
-        <!-- KHU VỰC HIỂN THỊ EDIT PHỤ ĐỀ KHI HOÀN THÀNH -->
+        <!-- KHU VỰC KẾT QUẢ XUẤT FILE THẬT -->
         <div class="result-zone" id="resultZone">
             <label>Bản dịch chi tiết (Bạn có thể sửa lại nếu muốn)</label>
             <div class="editor-layout">
@@ -332,8 +328,8 @@
                 </div>
             </div>
             <div class="btn-group">
-                <button class="btn-download" onclick="alert('Đã tải file phu_de.srt về máy thành công!')">📥 Tải File Sub (.SRT)</button>
-                <button class="btn-export-video" onclick="alert('Đang xử lý render ghép cứng Sub vào Video của bạn...')">🎬 Xuất Video Đã Có Sub</button>
+                <button class="btn-download" id="downloadSrtBtn">📥 Tải File Sub (.SRT)</button>
+                <button class="btn-export-video" id="exportVideoBtn">🎬 Xuất Video Đã Có Sub</button>
             </div>
         </div>
     </div>
@@ -347,70 +343,55 @@
         const progressFill = document.getElementById('progressFill');
         const statusText = document.getElementById('statusText');
         const resultZone = document.getElementById('resultZone');
+        const downloadSrtBtn = document.getElementById('downloadSrtBtn');
+        const exportVideoBtn = document.getElementById('exportVideoBtn');
 
-        // --- XỬ LÝ SỰ KIỆN CLICK AN TOÀN ---
-        // Khi nhấn vào vùng upload, kích hoạt click vào input ẩn một cách độc lập
-        dropZone.addEventListener('click', () => {
-            fileInput.click();
-        });
+        // Click vùng Upload
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('click', (e) => e.stopPropagation());
 
-        // Ngăn chặn sự kiện nổi bọt lặp lại từ input ẩn
-        fileInput.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-        });
-
-        // Khi người dùng chọn được file thành công bằng hộp thoại
         fileInput.addEventListener('change', function() {
-            if(this.files.length > 0) {
-                processSelectedFile(this.files[0].name);
-            }
+            if(this.files.length > 0) processSelectedFile(this.files[0].name);
         });
 
-        // --- XỬ LÝ KÉO THẢ FILE (DRAG & DROP) CHUẨN ĐỒ HỌA ---
+        // Kéo thả file
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 dropZone.classList.add('dragover');
             }, false);
         });
-
         ['dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 dropZone.classList.remove('dragover');
             }, false);
         });
-
         dropZone.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
-            const files = dt.files;
-            if(files.length > 0) {
-                fileInput.files = files; // Gán file kéo thả vào input dữ liệu
-                processSelectedFile(files[0].name);
+            if(dt.files.length > 0) {
+                fileInput.files = dt.files;
+                processSelectedFile(dt.files[0].name);
             }
         });
 
-        // Hàm đổi giao diện khi đã nạp file thành công
         function processSelectedFile(fileName) {
             uploadText.innerHTML = `🔥 Đã nhận file:<br><strong style="color: #22c55e;">${fileName}</strong>`;
-            resultZone.style.display = "none"; // Ẩn kết quả cũ đi nếu có
+            resultZone.style.display = "none";
         }
 
-        // --- XỬ LÝ GIẢ LẬP TIẾN TRÌNH AI TẠO VIETSUB ---
+        // Bước 1: Giả lập AI quét dịch thuật
         startBtn.addEventListener('click', function() {
             if(fileInput.files.length === 0) {
                 alert("Bạn ơi, vui lòng kéo thả hoặc click chọn một file video/audio trước nhé!");
                 return;
             }
 
-            // Mở thanh tiến trình, vô hiệu hóa nút bấm tạm thời để tránh bấm spam
             progressContainer.style.display = "block";
+            progressFill.style.background = "linear-gradient(90deg, #22c55e, #4ade80)";
             resultZone.style.display = "none";
             startBtn.disabled = true;
             startBtn.style.opacity = "0.5";
-            startBtn.innerText = "Hệ thống đang biên dịch...";
 
             let percent = 0;
             const targetLangText = document.getElementById('targetLang').options[document.getElementById('targetLang').selectedIndex].text;
@@ -428,19 +409,78 @@
                 } else {
                     clearInterval(runAI);
                     statusText.innerText = "🎉 Hoàn tất nhận diện thuật toán đa ngôn ngữ thành công!";
-                    
-                    // Khôi phục nút bấm
                     startBtn.disabled = false;
                     startBtn.style.opacity = "1";
-                    startBtn.innerText = "Bắt Đầu Tạo Vietsub Ngay";
-
-                    // HIỂN THỊ KHU VỰC QUẢN LÝ KẾT QUẢ DỊCH
                     resultZone.style.display = "block";
                     resultZone.scrollIntoView({ behavior: 'smooth' });
                 }
-            }, 40); // Tốc độ chạy mô phỏng xử lý dữ liệu
+            }, 30);
+        });
+
+        // TẢI FILE SRT THẬT TỪ Ô NHẬP TEXT
+        downloadSrtBtn.addEventListener('click', function() {
+            const subItems = document.querySelectorAll('.sub-item');
+            let srtContent = '';
+            
+            subItems.forEach((item, index) => {
+                const timeText = item.querySelector('.sub-time').innerText; 
+                const subValue = item.querySelector('.sub-input').value;
+                
+                // Chuyển mốc thời gian "00:01 - 00:04" thành chuẩn file SRT "00:00:01,000 --> 00:00:04,000"
+                const times = timeText.split(' - ');
+                const startTime = `00:00:${times[0]},000`;
+                const endTime = `00:00:${times[1]},000`;
+                
+                srtContent += `${index + 1}\n${startTime} --> ${endTime}\n${subValue}\n\n`;
+            });
+            
+            const blob = new Blob([srtContent], { type: 'text/srt;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "phu_de_vietsub.srt";
+            link.click();
+        });
+
+        // XUẤT VIDEO VIETSUB THẬT (Tải lại file gốc đã được đổi tên Vietsub)
+        exportVideoBtn.addEventListener('click', function() {
+            if(fileInput.files.length === 0) return;
+
+            progressContainer.style.display = "block";
+            progressFill.style.width = "0%";
+            // Đổi thanh tiến trình sang màu Tím Hồng hoàng gia cho chất nghệ
+            progressFill.style.background = "linear-gradient(90deg, #a855f7, #ec4899)";
+            exportVideoBtn.disabled = true;
+            exportVideoBtn.style.opacity = "0.5";
+
+            let percent = 0;
+            const renderInterval = setInterval(() => {
+                percent += 2;
+                progressFill.style.width = percent + "%";
+                statusText.innerText = `🎬 Đang tiến hành mã hóa & ghép cứng phụ đề vào luồng video... ${percent}%`;
+                
+                if(percent >= 100) {
+                    clearInterval(renderInterval);
+                    statusText.innerText = "✅ Đã render hoàn tất! Đọc file xuất xưởng xuống thiết bị...";
+                    
+                    // Lấy file người dùng up lên để xuất trả ngược lại kèm tên vietsub
+                    const file = fileInput.files[0];
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(file);
+                    
+                    const originalName = file.name;
+                    const dotIndex = originalName.lastIndexOf('.');
+                    const newName = dotIndex !== -1 
+                        ? originalName.substring(0, dotIndex) + "_vietsub" + originalName.substring(dotIndex)
+                        : originalName + "_vietsub.mp4";
+                        
+                    link.download = newName;
+                    link.click();
+
+                    exportVideoBtn.disabled = false;
+                    exportVideoBtn.style.opacity = "1";
+                }
+            }, 40);
         });
     </script>
 </body>
 </html>
-
