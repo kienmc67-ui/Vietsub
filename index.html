@@ -71,7 +71,7 @@
         /* Bảng điều khiển Auto-Responsive cho Di Động */
         .config-grid {
             display: grid;
-            grid-template-columns: 1fr; /* Mặc định 1 cột dọc trên điện thoại */
+            grid-template-columns: 1fr;
             gap: 12px;
             margin-bottom: 15px;
             background: #1f2937;
@@ -144,5 +144,390 @@
             height: auto; 
         }
 
-        /* THAN
-
+        /* THANH CHE PHỤ ĐỀ HỖ TRỢ CẢ CHUỘT VÀ CẢM ỨNG TAY */
+        .draggable-blur-layer {
+            position: absolute;
+            bottom: 12%;
+            left: 2%;
+            width: 96%;
+            height: 50px;
+            background: rgba(15, 23, 42, 0.95); 
+            border: 1.5px dashed #38bdf8;
+            border-radius: 6px;
+            cursor: move;
+            z-index: 10;
+            touch-action: none;
+        }
+
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background: #38bdf8;
+            cursor: ns-resize;
+            opacity: 0.6;
+            touch-action: none;
+        }
+
+        /* CHỮ PHỤ ĐỀ VIỆTSUB TO RÕ RÀNG */
+        .live-vietsub-overlay {
+            position: absolute;
+            left: 2%;
+            width: 96%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #ffffff; 
+            font-size: 17px; 
+            font-weight: 800;
+            line-height: 1.4;
+            z-index: 20;
+            pointer-events: none;
+            text-shadow: 
+                2px 2px 0px #000, 
+               -2px -2px 0px #000, 
+                2px -2px 0px #000, 
+               -2px 2px 0px #000,
+                0px 0px 8px rgba(0,0,0,1);
+        }
+
+        @media (min-width: 600px) {
+            .live-vietsub-overlay { font-size: 24px; }
+            .draggable-blur-layer { height: 65px; }
+        }
+
+        .status-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: #030712;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            border: 1px solid #1f2937;
+        }
+        .status-active { color: #34d399; font-weight: bold; }
+        
+        #captureCanvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>AI Director Vision Mobile V3</h2>
+        <div class="subtitle">Bản sửa lỗi: Nhận diện ngôn ngữ chuẩn xác & Chống dịch nhiễu</div>
+
+        <div class="upload-zone" id="dropZone">
+            <p id="uploadText">👉 CHẠM VÀO ĐÂY ĐỂ CHỌN VIDEO 👈</p>
+        </div>
+
+        <div class="config-grid">
+            <div class="select-box">
+                <label>Chữ gốc trên phim</label>
+                <select id="ocrLang">
+                    <option value="chi_sim">Tiếng Trung (Giản thể)</option>
+                    <option value="eng">Tiếng Anh (English)</option>
+                    <option value="jpn">Tiếng Nhật</option>
+                </select>
+            </div>
+
+            <div class="select-box">
+                <label>Giọng Đọc Tiếng Việt</label>
+                <select id="voiceSelect">
+                    <option value="">Đang nạp giọng chuẩn hệ thống...</option>
+                </select>
+            </div>
+            
+            <div class="select-box">
+                <label>Tốc độ giọng đọc AI</label>
+                <select id="ttsRate">
+                    <option value="1.25">1.25x (Khuyên dùng)</option>
+                    <option value="1.0">1.0x (Bình thường)</option>
+                    <option value="1.4">1.4x (Đọc nhanh)</option>
+                </select>
+            </div>
+
+            <div class="sliders-wrapper">
+                <label>Cân chỉnh vị trí thanh xám bằng thanh trượt (Hoặc dùng tay kéo trực tiếp)</label>
+                <div class="control-sliders">
+                    <div class="slider-group">
+                        <span>Vị trí đứng Y (%):</span>
+                        <input type="range" id="sliderY" min="0" max="90" value="12">
+                    </div>
+                    <div class="slider-group">
+                        <span>Độ cao thanh che (px):</span>
+                        <input type="range" id="sliderHeight" min="25" max="150" value="50">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WORKSPACE VIDEO PLAYER -->
+        <div class="video-player-wrapper">
+            <video id="mainVideo" controls playsinline></video>
+            
+            <!-- Thanh màu xám che phủ xóa phụ đề gốc (Hỗ trợ kéo bằng tay) -->
+            <div class="draggable-blur-layer" id="blurLayer">
+                <div class="resize-handle" id="resizeHandle"></div>
+            </div>
+            
+            <!-- Lớp hiển thị chữ phụ đề mới dịch rõ ràng đè lên trên -->
+            <div class="live-vietsub-overlay" id="liveSubText">Đang chờ video...</div>
+        </div>
+
+        <div class="status-bar">
+            <span id="logOcr">AI OCR Status: Đang chờ file...</span>
+            <span class="status-active">✓ Chế độ tự động dịch và phát âm thanh đang bật</span>
+        </div>
+    </div>
+
+    <canvas id="captureCanvas"></canvas>
+
+    <script>
+        const videoFileInput = document.createElement('input');
+        videoFileInput.type = 'file';
+        videoFileInput.accept = 'video/*';
+        
+        const dropZone = document.getElementById('dropZone');
+        const uploadText = document.getElementById('uploadText');
+        const mainVideo = document.getElementById('mainVideo');
+        const blurLayer = document.getElementById('blurLayer');
+        const liveSubText = document.getElementById('liveSubText');
+        
+        const sliderY = document.getElementById('sliderY');
+        const sliderHeight = document.getElementById('sliderHeight');
+        const ocrLangSelect = document.getElementById('ocrLang');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const ttsRate = document.getElementById('ttsRate');
+        const logOcr = document.getElementById('logOcr');
+        
+        const canvas = document.getElementById('captureCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let ocrWorker = null;
+        let scanTimer = null;
+        let lastLoggedText = "";
+        let isProcessingFrame = false;
+
+        function syncSubtitlePosition() {
+            const barBottom = blurLayer.style.bottom || window.getComputedStyle(blurLayer).bottom;
+            const barHeight = parseFloat(window.getComputedStyle(blurLayer).height);
+            liveSubText.style.bottom = barBottom;
+            liveSubText.style.height = barHeight + 'px';
+        }
+
+        function loadVoices() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            const viVoices = voices.filter(v => v.lang.includes('vi') || v.lang.includes('VI'));
+            
+            if(viVoices.length > 0) {
+                viVoices.forEach(v => {
+                    let option = document.createElement('option');
+                    option.value = v.name;
+                    option.innerText = `Giọng Việt: ${v.name}`;
+                    voiceSelect.appendChild(option);
+                });
+            } else {
+                let option = document.createElement('option');
+                option.value = "";
+                option.innerText = "Giọng mặc định thiết bị";
+                voiceSelect.appendChild(option);
+            }
+        }
+        if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        setTimeout(loadVoices, 600);
+
+        async function startOcrCore() {
+            logOcr.innerText = "🤖 Đang khởi động lõi AI ngôn ngữ...";
+            try {
+                ocrWorker = await Tesseract.createWorker(ocrLangSelect.value);
+                logOcr.innerText = "⚡ Hệ thống OCR đã sẵn sàng! Bấm chạy video để dịch.";
+            } catch(e) {
+                logOcr.innerText = "❌ Lỗi tải thư viện ngôn ngữ!";
+            }
+        }
+        startOcrCore();
+
+        ocrLangSelect.addEventListener('change', async () => {
+            if(ocrWorker) await ocrWorker.terminate();
+            startOcrCore();
+        });
+
+        dropZone.addEventListener('click', () => videoFileInput.click());
+        videoFileInput.addEventListener('change', function() {
+            if(this.files.length > 0) {
+                mainVideo.src = URL.createObjectURL(this.files[0]);
+                uploadText.innerHTML = `Đã nhận: <span style="color:#22c55e">${this.files[0].name}</span>`;
+                mainVideo.muted = true;
+            }
+        });
+
+        mainVideo.addEventListener('loadedmetadata', syncSubtitlePosition);
+
+        let isDragging = false, isResizing = false, yStart, startBottom, startHeight;
+
+        function getClientY(e) {
+            return e.touches ? e.touches[0].clientY : e.clientY;
+        }
+
+        function actionStart(e, type) {
+            if (type === 'resize') {
+                isResizing = true;
+                e.stopPropagation();
+            } else {
+                if (e.target.id === 'resizeHandle') return;
+                isDragging = true;
+            }
+            yStart = getClientY(e);
+            startBottom = parseInt(window.getComputedStyle(blurLayer).bottom, 10) || 0;
+            startHeight = parseInt(window.getComputedStyle(blurLayer).height, 10) || 50;
+            
+            if(e.cancelable) e.preventDefault();
+        }
+
+        function actionMove(e) {
+            if (!isDragging && !isResizing) return;
+            
+            let currentY = getClientY(e);
+            let deltaY = yStart - currentY;
+
+            if (isDragging) {
+                let targetBottom = startBottom + deltaY;
+                blurLayer.style.bottom = targetBottom + 'px';
+                let maxH = mainVideo.offsetHeight || 1;
+                sliderY.value = Math.min(90, Math.max(0, Math.round((targetBottom / maxH) * 100)));
+            }
+            if (isResizing) {
+                let newH = startHeight + deltaY;
+                if(newH > 20 && newH < 200) {
+                    blurLayer.style.height = newH + 'px';
+                    sliderHeight.value = newH;
+                }
+            }
+
+            syncSubtitlePosition();
+            if(e.cancelable) e.preventDefault();
+        }
+
+        function actionEnd() {
+            isDragging = false;
+            isResizing = false;
+            syncSubtitlePosition();
+        }
+
+        blurLayer.addEventListener('mousedown', (e) => actionStart(e, 'drag'));
+        document.getElementById('resizeHandle').addEventListener('mousedown', (e) => actionStart(e, 'resize'));
+        document.addEventListener('mousemove', actionMove);
+        document.addEventListener('mouseup', actionEnd);
+
+        blurLayer.addEventListener('touchstart', (e) => actionStart(e, 'drag'), { passive: false });
+        document.getElementById('resizeHandle').addEventListener('touchstart', (e) => actionStart(e, 'resize'), { passive: false });
+        document.addEventListener('touchmove', actionMove, { passive: false });
+        document.addEventListener('touchend', actionEnd);
+
+        sliderY.addEventListener('input', function() {
+            blurLayer.style.bottom = this.value + '%';
+            syncSubtitlePosition();
+        });
+        sliderHeight.addEventListener('input', function() {
+            blurLayer.style.height = this.value + 'px';
+            syncSubtitlePosition();
+        });
+
+        syncSubtitlePosition();
+
+        async function executeTranslation(rawText) {
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(rawText)}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                return result[0].map(item => item[0]).join('');
+            } catch (err) { return rawText; }
+        }
+
+        function playTtsVoice(translatedText) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel(); 
+
+            const utterance = new SpeechSynthesisUtterance(translatedText);
+            utterance.lang = 'vi-VN';
+            utterance.rate = parseFloat(ttsRate.value);
+
+            const voices = window.speechSynthesis.getVoices();
+            const selectedVoiceObj = voices.find(v => v.name === voiceSelect.value);
+            if(selectedVoiceObj) utterance.voice = selectedVoiceObj;
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        mainVideo.addEventListener('play', () => {
+            mainVideo.muted = true;
+
+            scanTimer = setInterval(async () => {
+                if (mainVideo.paused || mainVideo.ended || !ocrWorker || isProcessingFrame) return;
+
+                isProcessingFrame = true;
+
+                canvas.width = mainVideo.videoWidth;
+                canvas.height = mainVideo.videoHeight;
+
+                const displayHeight = mainVideo.offsetHeight;
+                const scaleFactor = mainVideo.videoHeight / displayHeight;
+
+                const cropHeight = blurLayer.offsetHeight * scaleFactor;
+                const cropBottom = parseFloat(window.getComputedStyle(blurLayer).bottom) * scaleFactor;
+                const cropTop = mainVideo.videoHeight - cropBottom - cropHeight;
+
+                ctx.drawImage(
+                    mainVideo, 
+                    0, cropTop, mainVideo.videoWidth, cropHeight, 
+                    0, 0, mainVideo.videoWidth, cropHeight
+                );
+
+                try {
+                    let imgData = ctx.getImageData(0, 0, canvas.width, cropHeight);
+                    let data = imgData.data;
+                    
+                    // Xử lý ảnh xám cân bằng động (Không dùng nhị phân gắt gây mất nét chữ Trung)
+                    for (let i = 0; i < data.length; i += 4) {
+                        let v = 0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2];
+                        data[i] = v; data[i+1] = v; data[i+2] = v;
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+
+                    const { data: { text } } = await ocrWorker.recognize(canvas);
+                    
+                    // SỬA LỖI REGEX: Giữ lại toàn bộ ký tự Unicode ngôn ngữ (\p{L}), số (\p{N}) toàn cầu
+                    let filteredText = text.replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+
+                    if (filteredText.length >= 1 && filteredText !== lastLoggedText) {
+                        lastLoggedText = filteredText;
+                        logOcr.innerText = `🔍 AI Đang đọc chữ: "${filteredText.substring(0, 20)}"`;
+
+                        let vietnameseResult = await executeTranslation(filteredText);
+                        liveSubText.innerText = vietnameseResult;
+                        playTtsVoice(vietnameseResult);
+                    }
+                } catch (ocrError) {
+                    console.log("AI skip frame...");
+                } finally {
+                    isProcessingFrame = false;
+                }
+
+            }, 500); 
+        });
+
+        mainVideo.addEventListener('pause', () => {
+            clearInterval(scanTimer);
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+        });
+    </script>
+</body>
+</html>
