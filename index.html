@@ -168,14 +168,17 @@
             background: #ffffff;
             cursor: ns-resize;
             opacity: 0.7;
+            touch-action: none; /* FIX: đảm bảo tay cầm resize không bị trình duyệt cướp cử chỉ cuộn */
         }
 
-        /* CHỮ PHỤ ĐỀ VIỆTSUB TO RÕ RÀNG */
+        /* CHỮ PHỤ ĐỀ VIỆTSUB TO RÕ RÀNG - vị trí giờ được JS đồng bộ 100% theo thanh che */
         .live-vietsub-overlay {
             position: absolute;
-            bottom: 13%;
             left: 2%;
             width: 96%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             color: #ffffff; 
             font-size: 16px; 
@@ -214,7 +217,7 @@
 
     <div class="container">
         <h2>AI Director Vision Mobile V3</h2>
-        <div class="subtitle">Bản sửa lỗi: Hỗ trợ cảm ứng vuốt chạm kéo thả thanh xám trên điện thoại</div>
+        <div class="subtitle">Bản sửa lỗi: Phụ đề dịch bám sát 100% theo thanh che khi kéo/resize</div>
 
         <div class="upload-zone" id="dropZone">
             <p id="uploadText">👉 CHẠM VÀO ĐÂY ĐỂ CHỌN VIDEO 👈</p>
@@ -308,6 +311,16 @@
         let lastLoggedText = "";
         let isProcessingFrame = false;
 
+        // ===== FIX CHÍNH: Đồng bộ phụ đề dịch bám sát 100% theo thanh che xám =====
+        // Mỗi lần thanh che di chuyển / đổi kích thước (kéo tay hoặc kéo slider),
+        // hàm này được gọi để dòng chữ dịch luôn nằm ĐÚNG vị trí và chiều cao của thanh che.
+        function syncSubtitlePosition() {
+            const barBottom = blurLayer.style.bottom || window.getComputedStyle(blurLayer).bottom;
+            const barHeight = parseFloat(window.getComputedStyle(blurLayer).height);
+            liveSubText.style.bottom = barBottom;
+            liveSubText.style.height = barHeight + 'px';
+        }
+
         // LOAD GIỌNG ĐỌC MOBILE TỰ ĐỘNG
         function loadVoices() {
             if (!('speechSynthesis' in window)) return;
@@ -357,6 +370,9 @@
             }
         });
 
+        // Khi video đã có kích thước hiển thị thật, đồng bộ lại vị trí phụ đề ngay
+        mainVideo.addEventListener('loadedmetadata', syncSubtitlePosition);
+
         // THUẬT TOÁN ĐA CHẠM (TOUCH) & CHUỘT (MOUSE) CHO MOBILE VÀ PC
         let isDragging = false, isResizing = false, yStart, startBottom, startHeight;
 
@@ -398,10 +414,18 @@
                     sliderHeight.value = newH;
                 }
             }
+
+            // FIX: bám theo ngay lập tức trong lúc đang kéo/resize, không đợi thả tay
+            syncSubtitlePosition();
+
             if(e.cancelable) e.preventDefault();
         }
 
-        function actionEnd() { isDragging = false; isResizing = false; }
+        function actionEnd() {
+            isDragging = false;
+            isResizing = false;
+            syncSubtitlePosition(); // đảm bảo vị trí cuối cùng khớp 100%
+        }
 
         // Gắn sự kiện chuột (PC)
         blurLayer.addEventListener('mousedown', (e) => actionStart(e, 'drag'));
@@ -415,9 +439,18 @@
         document.addEventListener('touchmove', actionMove, { passive: false });
         document.addEventListener('touchend', actionEnd);
 
-        // Đồng bộ ngược từ thanh trượt input slider ra thanh xám
-        sliderY.addEventListener('input', function() { blurLayer.style.bottom = this.value + '%'; });
-        sliderHeight.addEventListener('input', function() { blurLayer.style.height = this.value + 'px'; });
+        // Đồng bộ ngược từ thanh trượt input slider ra thanh xám + phụ đề dịch
+        sliderY.addEventListener('input', function() {
+            blurLayer.style.bottom = this.value + '%';
+            syncSubtitlePosition();
+        });
+        sliderHeight.addEventListener('input', function() {
+            blurLayer.style.height = this.value + 'px';
+            syncSubtitlePosition();
+        });
+
+        // Gọi lần đầu để phụ đề khớp vị trí mặc định ngay khi trang tải xong
+        syncSubtitlePosition();
 
         // DỊCH GOOGLE
         async function executeTranslation(rawText) {
