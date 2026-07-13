@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Director Platinum - Auto Vietsub & Mute Original Audio</title>
+    <title>AI Director Pro - Real Time SRT Translator & TTS</title>
     <style>
         * {
             margin: 0;
@@ -46,20 +46,27 @@
             margin-bottom: 20px;
         }
 
-        /* Vùng Upload */
+        /* Khu vực nạp dữ liệu song song */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
         .upload-zone {
             border: 2px dashed #38bdf8;
             background: #0f172a;
             border-radius: 12px;
-            padding: 25px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: 0.2s;
-            margin-bottom: 20px;
         }
 
         .upload-zone:hover { background: #111e36; }
-        #fileInput { display: none; }
+        .upload-zone input { display: none; }
+        .upload-zone p { font-size: 13px; margin-top: 8px; color: #94a3b8; }
 
         /* Cấu hình công cụ */
         .config-grid {
@@ -88,7 +95,6 @@
             outline: none;
         }
 
-        /* Tùy chỉnh cấu hình nâng cao */
         .feature-toggles {
             grid-column: span 2;
             display: flex;
@@ -110,7 +116,6 @@
 
         .toggle-item input { width: 16px; height: 16px; cursor: pointer; }
 
-        /* Điều chỉnh thanh che phụ đề bằng Slider */
         .control-sliders {
             display: flex;
             gap: 15px;
@@ -161,7 +166,7 @@
         .progress-fill { height: 100%; width: 0%; background: #22c55e; }
         .status-text { font-size: 12px; color: #4ade80; text-align: center; }
 
-        /* KHU VỰC WORKSPACE CHÍNH */
+        /* WORKSPACE CHÍNH */
         .workspace-zone {
             margin-top: 25px;
             border-top: 2px dashed #334155;
@@ -169,7 +174,6 @@
             display: none;
         }
 
-        /* Khung Video Player tích hợp lớp phủ */
         .video-player-wrapper {
             position: relative;
             width: 100%;
@@ -183,14 +187,14 @@
 
         video { width: 100%; height: 100%; object-fit: contain; }
 
-        /* THANH CHE PHỤ ĐỀ MÀU XÁM - CÓ THỂ KÉO THẢ DI CHUYỂN VÀ CO GIÃN */
+        /* THANH CHE MÀU XÁM ĐÈ PHỤ ĐỀ CŨ */
         .draggable-blur-layer {
             position: absolute;
             bottom: 12%;
             left: 5%;
             width: 90%;
-            height: 48px;
-            background: rgba(128, 128, 128, 0.95); /* ĐÃ ĐỔI THÀNH MÀU XÁM ĐẬM CHUẨN XÓA SUB */
+            height: 52px;
+            background: rgba(115, 115, 115, 0.98); /* Màu xám đậm che phủ hoàn hảo */
             border: 1px dashed #ffffff;
             border-radius: 4px;
             cursor: move;
@@ -198,7 +202,6 @@
             z-index: 10;
         }
 
-        /* Điểm neo để kéo giãn độ cao thanh che màu xám */
         .resize-handle {
             position: absolute;
             top: 0;
@@ -210,22 +213,21 @@
             opacity: 0.7;
         }
 
-        /* Chữ phụ đề Vietsub mới nhảy đè lên */
+        /* CHỮ PHỤ ĐỀ ĐÃ DỊCH ĐÈ LÊN TRÊN THANH XÁM */
         .live-vietsub-overlay {
             position: absolute;
-            bottom: 14%;
+            bottom: 13.5%;
             left: 5%;
             width: 90%;
             text-align: center;
             color: #ffffff;
-            font-size: 19px;
+            font-size: 20px;
             font-weight: bold;
-            text-shadow: 2px 2px 4px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            text-shadow: 2px 2px 4px #000;
             z-index: 20;
-            pointer-events: none;
+            pointer-events: none; /* Tránh lệch tiêu điểm chuột khi kéo thanh xám */
         }
 
-        /* Khu vực các ô dịch thuật */
         .sub-timeline {
             background: #0f172a;
             border-radius: 8px;
@@ -249,6 +251,7 @@
             font-size: 11px;
             font-family: monospace;
             padding-top: 8px;
+            min-width: 80px;
         }
 
         .sub-input-box {
@@ -291,66 +294,73 @@
 <body>
 
     <div class="container">
-        <h2>AI Director Platinum - Auto Vietsub & Dubbing</h2>
-        <div class="subtitle">Bóc tách dịch thuật tự động, che phụ đề màu xám và loại bỏ hoàn toàn âm thanh gốc</div>
+        <h2>AI Director Pro - Auto Sub Translation & Dubbing</h2>
+        <div class="subtitle">Khớp nối tự động phụ đề dịch, che thanh xám và đồng bộ âm thanh giọng đọc AI</div>
 
-        <!-- Chọn File -->
-        <div class="upload-zone" id="dropZone">
-            <svg width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <p id="uploadText">Kéo thả hoặc nhấn vào đây để tải Video cần xử lý</p>
-            <input type="file" id="fileInput" accept="video/*">
+        <!-- Khu vực chọn Video và File SRT cùng lúc -->
+        <div class="upload-grid">
+            <div class="upload-zone" id="videoDropZone">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                <p id="videoUploadText">1. Chọn file Video gốc</p>
+                <input type="file" id="videoFileInput" accept="video/*">
+            </div>
+
+            <div class="upload-zone" id="srtDropZone" style="border-color: #a855f7;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <p id="srtUploadText">2. Chọn file phụ đề gốc (.SRT)</p>
+                <input type="file" id="srtFileInput" accept=".srt">
+            </div>
         </div>
 
         <!-- Cấu hình hệ thống -->
         <div class="config-grid">
             <div class="select-box">
-                <label>Ngôn ngữ gốc của Video</label>
-                <select id="sourceLang">
-                    <option value="en">Tiếng Anh (English)</option>
-                    <option value="zh">Tiếng Trung (Chinese)</option>
-                    <option value="ja">Tiếng Nhật (Japanese)</option>
-                </select>
-            </div>
-            <div class="select-box">
-                <label>Ngôn ngữ đích muốn tự động dịch</label>
+                <label>Ngôn ngữ đích muốn dịch sang</label>
                 <select id="targetLang">
                     <option value="vi">Tiếng Việt (Vietsub + Thuyết Minh AI)</option>
-                    <option value="en">Tiếng Anh (English Sub)</option>
+                    <option value="en">Tiếng Anh (English)</option>
+                </select>
+            </div>
+            
+            <div class="select-box">
+                <label>Tốc độ đọc thuyết minh AI</label>
+                <select id="ttsRate">
+                    <option value="1.15">1.15x (Khuyên dùng - Đọc nhanh khớp phim)</option>
+                    <option value="1.0">1.0x (Bình thường)</option>
+                    <option value="1.3">1.3x (Rất nhanh)</option>
                 </select>
             </div>
             
             <div class="feature-toggles">
-                <!-- Cấu hình lớp che màu xám -->
                 <label class="toggle-item">
                     <input type="checkbox" id="enableBlurCheck" checked>
-                    <span>Kích hoạt thanh màu xám che phụ đề cũ (Bấm giữ chuột vào thanh để di chuyển)</span>
+                    <span>Kích hoạt thanh màu xám che phụ đề cũ (Giữ chuột vào thanh để di chuyển lên/xuống)</span>
                 </label>
                 
                 <div class="control-sliders">
                     <div class="slider-group">
-                        <span>Vị trí Y (%):</span>
+                        <span>Vị trí đứng Y (%):</span>
                         <input type="range" id="sliderY" min="0" max="90" value="12">
                     </div>
                     <div class="slider-group">
-                        <span>Độ cao (px):</span>
-                        <input type="range" id="sliderHeight" min="20" max="120" value="48">
+                        <span>Độ cao thanh xám (px):</span>
+                        <input type="range" id="sliderHeight" min="20" max="150" value="52">
                     </div>
                 </div>
 
-                <!-- TÁCH BỎ VÀ THAY THẾ ÂM THANH GỐC -->
-                <label class="toggle-item" style="margin-top: 5px; color: #f43f5e; font-weight: bold;">
+                <label class="toggle-item" style="color: #f43f5e; font-weight: bold;">
                     <input type="checkbox" id="muteOriginalCheck" checked>
-                    <span>🔇 Loại bỏ hoàn toàn âm thanh gốc của video (Thay thế bằng giọng đọc phụ đề AI)</span>
+                    <span>🔇 Loại bỏ âm thanh video gốc (Chỉ giữ âm thanh phụ đề dịch đọc lên)</span>
                 </label>
             </div>
         </div>
 
-        <button class="btn-submit" id="startBtn">Kích Hoạt AI Auto Dịch & Thuyết Minh</button>
+        <button class="btn-submit" id="startBtn">Bắt Đầu Quét, Auto Dịch & Đồng Bộ Khớp Trục</button>
 
         <!-- Trạng thái quét -->
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="status-text" id="statusText">Đang sẵn sàng quét hệ thống...</div>
+            <div class="status-text" id="statusText">Đang sẵn sàng kết nối dữ liệu...</div>
         </div>
 
         <!-- WORKSPACE HOẠT ĐỘNG THỜI GIAN THỰC -->
@@ -358,40 +368,39 @@
             <div class="video-player-wrapper" id="playerWrapper">
                 <video id="mainVideo" controls></video>
                 
-                <!-- Thanh màu xám che phụ đề cũ di chuyển tự do -->
+                <!-- Thanh che màu xám di chuyển tự do -->
                 <div class="draggable-blur-layer" id="blurLayer">
                     <div class="resize-handle" id="resizeHandle"></div>
                 </div>
                 
-                <!-- Lớp hiển thị chữ phụ đề mới -->
+                <!-- Lớp hiển thị chữ phụ đề mới nằm đè lên thanh xám -->
                 <div class="live-vietsub-overlay" id="liveSubText"></div>
             </div>
 
-            <label>Bảng điều khiển và tinh chỉnh nội dung đã tự động dịch thuật</label>
+            <label>Danh sách phụ đề đã bóc tách & dịch thuật tự động theo Timeline</label>
             <div class="sub-timeline" id="subTimelineBox"></div>
 
             <div class="btn-group">
-                <button class="btn-action btn-download" id="downloadSrt">📥 Tải File Sub Chuẩn (.SRT)</button>
+                <button class="btn-action btn-download" id="downloadSrt">📥 Tải File Sub Việt (.SRT)</button>
                 <button class="btn-action btn-export" id="exportVideo">🎬 Đóng Gói Video Xuất Bản</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Dữ liệu văn bản gốc để hệ thống tự động gọi API dịch thuật thời gian thực
-        const originalEnglishSubs = [
-            { time: "00:01 - 00:04", text: "Welcome back to another video on our tech channel!", start: 1, end: 4 },
-            { time: "00:05 - 00:09", text: "Today we are testing an automated artificial intelligence system.", start: 5, end: 9 },
-            { time: "00:10 - 00:14", text: "It can wipe out old subtitles and read text beautifully in real time.", start: 10, end: 14 }
-        ];
-
-        let activeSubData = [];
+        let parsedRawSubs = []; // Mảng chứa dữ liệu sub gốc đọc từ file .srt
+        let activeSubData = [];  // Mảng chứa dữ liệu sau khi dịch thuật thành công
         let lastSpokenIndex = -1;
 
-        const fileInput = document.getElementById('fileInput');
-        const dropZone = document.getElementById('dropZone');
-        const uploadText = document.getElementById('uploadText');
+        const videoFileInput = document.getElementById('videoFileInput');
+        const srtFileInput = document.getElementById('srtFileInput');
+        const videoDropZone = document.getElementById('videoDropZone');
+        const srtDropZone = document.getElementById('srtDropZone');
+        
+        const videoUploadText = document.getElementById('videoUploadText');
+        const srtUploadText = document.getElementById('srtUploadText');
         const startBtn = document.getElementById('startBtn');
+        
         const progressContainer = document.getElementById('progressContainer');
         const progressFill = document.getElementById('progressFill');
         const statusText = document.getElementById('statusText');
@@ -405,19 +414,56 @@
         const muteOriginalCheck = document.getElementById('muteOriginalCheck');
         const sliderY = document.getElementById('sliderY');
         const sliderHeight = document.getElementById('sliderHeight');
+        const ttsRate = document.getElementById('ttsRate');
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('click', e => e.stopPropagation());
-        fileInput.addEventListener('change', function() {
+        // Xử lý sự kiện nhấn nạp file
+        videoDropZone.addEventListener('click', () => videoFileInput.click());
+        srtDropZone.addEventListener('click', () => srtFileInput.click());
+
+        videoFileInput.addEventListener('change', function() {
             if(this.files.length > 0) {
                 mainVideo.src = URL.createObjectURL(this.files[0]);
-                uploadText.innerHTML = `🔥 Đã nạp thành công: <span style="color:#22c55e">${this.files[0].name}</span>`;
-                workspaceZone.style.display = "none";
-                applyAudioSettings(); // Áp dụng cài đặt tắt âm lập tức
+                videoUploadText.innerHTML = `✅ Video: <span style="color:#22c55e">${this.files[0].name}</span>`;
+                applyAudioSettings();
             }
         });
 
-        // HÀM GỌI API GOOGLE TRANSLATE ĐỂ TỰ ĐỘNG DỊCH THẬT
+        srtFileInput.addEventListener('change', function() {
+            if(this.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    parsedRawSubs = parseSRT(e.target.result);
+                    srtUploadText.innerHTML = `✅ Đã đọc <span style="color:#a855f7">${parsedRawSubs.length} câu sub</span>`;
+                };
+                reader.readAsText(this.files[0]);
+            }
+        });
+
+        // HÀM QUAN TRỌNG: BÓC TÁCH FILE SRT THÀNH TIMELINE CHUẨN GIÂY
+        function parseSRT(data) {
+            const regex = /(\d+)\r?\n(\d\d:\d\d:\d\d[,\.]\d\d\d) --> (\d\d:\d\d:\d\d[,\.]\d\d\d)\r?\n([\s\S]*?)(?=\n{2,}|\n*$)/g;
+            let matches;
+            let subs = [];
+            
+            while ((matches = regex.exec(data)) !== null) {
+                subs.push({
+                    index: matches[1],
+                    startTime: timeToSeconds(matches[2]),
+                    endTime: timeToSeconds(matches[3]),
+                    timeLabel: `${matches[2].substring(3,8)} - ${matches[3].substring(3,8)}`,
+                    text: matches[4].replace(/\r?\n/g, ' ')
+                });
+            }
+            return subs;
+        }
+
+        function timeToSeconds(timeString) {
+            const parts = timeString.split(':');
+            const secondsParts = parts[2].split(/[,\.]/);
+            return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(secondsParts[0], 10) + (parseInt(secondsParts[1], 10) / 1000);
+        }
+
+        // HÀM GỌI API DỊCH TỰ ĐỘNG THỜI GIAN THỰC
         async function translateText(text, targetLangCode) {
             try {
                 const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLangCode}&dt=t&q=${encodeURIComponent(text)}`;
@@ -425,13 +471,13 @@
                 const result = await response.json();
                 return result[0].map(item => item[0]).join('');
             } catch (error) {
-                return text;
+                return text; // Fallback nếu lỗi kết nối mạng
             }
         }
 
-        // ĐIỀU KHIỂN KÉO THẢ THANH MÀU XÁM BẰNG CHUỘT / CẢM ỨNG
-        let isDragging = false;
-        let startY, startBottom;
+        // ĐIỀU KHIỂN KÉO THẢ THANH MÀU XÁM BẰNG CHUỘT
+        let isDragging = false, isResizing = false;
+        let startY, startBottom, startHeight;
 
         blurLayer.addEventListener('mousedown', function(e) {
             if(e.target.id === 'resizeHandle') return;
@@ -441,22 +487,6 @@
             e.preventDefault();
         });
 
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            let deltaY = startY - e.clientY; 
-            let newBottom = startBottom + deltaY;
-            if(newBottom >= 0 && newBottom <= 300) {
-                blurLayer.style.bottom = newBottom + 'px';
-                sliderY.value = Math.min(90, Math.max(0, Math.round((newBottom / mainVideo.offsetHeight) * 100)));
-            }
-        });
-
-        document.addEventListener('mouseup', () => isDragging = false);
-
-        // KÉO GIÃN ĐỘ CAO THANH XÁM CHE SUB
-        let isResizing = false;
-        let startHeight;
-
         document.getElementById('resizeHandle').addEventListener('mousedown', function(e) {
             isResizing = true;
             startY = e.clientY;
@@ -465,101 +495,88 @@
         });
 
         document.addEventListener('mousemove', function(e) {
-            if (!isResizing) return;
-            let deltaY = startY - e.clientY; 
-            let newHeight = startHeight + deltaY;
-            if(newHeight > 15 && newHeight < 150) {
-                blurLayer.style.height = newHeight + 'px';
-                sliderHeight.value = newHeight;
+            if (isDragging) {
+                let deltaY = startY - e.clientY;
+                let newBottom = startBottom + deltaY;
+                blurLayer.style.bottom = newBottom + 'px';
+                sliderY.value = Math.min(90, Math.max(0, Math.round((newBottom / mainVideo.offsetHeight) * 100)));
+            }
+            if (isResizing) {
+                let deltaY = startY - e.clientY;
+                let newHeight = startHeight + deltaY;
+                if(newHeight > 15 && newHeight < 200) {
+                    blurLayer.style.height = newHeight + 'px';
+                    sliderHeight.value = newHeight;
+                }
             }
         });
 
-        document.addEventListener('mouseup', () => isResizing = false);
+        document.addEventListener('mouseup', () => { isDragging = false; isResizing = false; });
 
-        // ĐỒNG BỘ THANH CHE QUA SLIDER TRÊN GIAO DIỆN
         sliderY.addEventListener('input', function() { blurLayer.style.bottom = this.value + '%'; });
         sliderHeight.addEventListener('input', function() { blurLayer.style.height = this.value + 'px'; });
+        enableBlurCheck.addEventListener('change', () => { blurLayer.style.display = enableBlurCheck.checked ? "block" : "none"; });
 
-        function updateBlurVisibility() {
-            blurLayer.style.display = enableBlurCheck.checked ? "block" : "none";
-        }
-        enableBlurCheck.addEventListener('change', updateBlurVisibility);
-
-        // XỬ LÝ CHỨC NĂNG TÁCH BỎ / TẮT TIẾNG VIDEO GỐC
         function applyAudioSettings() {
-            if(muteOriginalCheck.checked) {
-                mainVideo.muted = true; // Triệt tiêu hoàn toàn âm thanh của video gốc
-            } else {
-                mainVideo.muted = false;
-            }
+            mainVideo.muted = muteOriginalCheck.checked;
         }
         muteOriginalCheck.addEventListener('change', applyAudioSettings);
 
-        // TIẾN TRÌNH AI AUTO DỊCH THUẬT VÀ KHỚP TRỤC THỜI GIAN
+        // TIẾN TRÌNH AUTO DỊCH TOÀN BỘ FILE PHỤ ĐỀ ĐÃ NẠP
         startBtn.addEventListener('click', async function() {
-            if(!mainVideo.src) {
-                alert("Vui lòng nạp Video lên hệ thống trước bạn nhé!"); return;
-            }
+            if(!mainVideo.src) { alert("Vui lòng nạp file Video!"); return; }
+            if(parsedRawSubs.length === 0) { alert("Vui lòng nạp file phụ đề .SRT tương ứng gốc của video!"); return; }
 
             progressContainer.style.display = "block";
             workspaceZone.style.display = "none";
             startBtn.disabled = true;
 
-            let percent = 0;
             const targetLangVal = document.getElementById('targetLang').value;
+            activeSubData = [];
+            subTimelineBox.innerHTML = '';
 
-            const runLoading = setInterval(async () => {
-                percent += 10;
-                progressFill.style.width = percent + "%";
-                statusText.innerText = `🤖 AI đang bóc tách luồng âm thanh và tự động dịch thuật... ${percent}%`;
+            let total = parsedRawSubs.length;
+            
+            for(let i = 0; i < total; i++) {
+                let currentItem = parsedRawSubs[i];
                 
-                if(percent >= 100) {
-                    clearInterval(runLoading);
-                    statusText.innerText = "⚡ Đang biên soạn đồng bộ trục thời gian thực...";
-                    
-                    activeSubData = [];
-                    subTimelineBox.innerHTML = '';
+                // Cập nhật thanh tiến trình chạy phần trăm thực tế dựa trên số câu dịch thuật
+                let currentPercent = Math.round(((i + 1) / total) * 100);
+                progressFill.style.width = currentPercent + "%";
+                statusText.innerText = `🤖 Đang auto dịch dòng ${i+1}/${total}: "${currentItem.text.substring(0, 20)}..."`;
 
-                    // Tiến hành lặp và gọi hàm dịch tự động thật từ API
-                    for(let i = 0; i < originalEnglishSubs.length; i++) {
-                        let originalObj = originalEnglishSubs[i];
-                        let translatedText = await translateText(originalObj.text, targetLangVal);
-                        
-                        activeSubData.push({
-                            time: originalObj.time,
-                            original: originalObj.text,
-                            text: translatedText,
-                            start: originalObj.start,
-                            end: originalObj.end
-                        });
-                    }
+                let translatedText = await translateText(currentItem.text, targetLangVal);
+                
+                activeSubData.push({
+                    time: currentItem.timeLabel,
+                    original: currentItem.text,
+                    text: translatedText,
+                    start: currentItem.startTime,
+                    end: currentItem.endTime
+                });
 
-                    // Render các ô chỉnh sửa dữ liệu sau dịch
-                    activeSubData.forEach((item, index) => {
-                        subTimelineBox.innerHTML += `
-                            <div class="sub-item">
-                                <span class="sub-time">${item.time}</span>
-                                <div class="sub-input-box">
-                                    <input type="text" class="sub-input" value="${item.original}" disabled style="opacity: 0.4;">
-                                    <input type="text" class="sub-input sub-translated" data-index="${index}" value="${item.text}" oninput="syncEditText(this)">
-                                </div>
-                            </div>
-                        `;
-                    });
+                // Render giao diện biên tập viên theo thời gian thực
+                subTimelineBox.innerHTML += `
+                    <div class="sub-item">
+                        <span class="sub-time">${currentItem.timeLabel}</span>
+                        <div class="sub-input-box">
+                            <input type="text" class="sub-input" value="${currentItem.text}" disabled style="opacity: 0.4;">
+                            <input type="text" class="sub-input sub-translated" data-index="${i}" value="${translatedText}" oninput="syncEditText(this)">
+                        </div>
+                    </div>
+                `;
+            }
 
-                    statusText.innerText = "🎉 Auto dịch thành công! Video gốc đã được loại bỏ âm thanh.";
-                    startBtn.disabled = false;
-                    workspaceZone.style.display = "block";
-                    
-                    updateBlurVisibility();
-                    applyAudioSettings(); // Chạy lệnh tắt tiếng âm thanh gốc video
-                    
-                    blurLayer.style.bottom = sliderY.value + '%';
-                    blurLayer.style.height = sliderHeight.value + 'px';
-
-                    workspaceZone.scrollIntoView({ behavior: 'smooth' });
-                }
-            }, 80);
+            statusText.innerText = "🎉 Toàn bộ phụ đề đã được bóc tách và dịch thành công khớp timeline!";
+            startBtn.disabled = false;
+            workspaceZone.style.display = "block";
+            
+            blurLayer.style.display = enableBlurCheck.checked ? "block" : "none";
+            applyAudioSettings();
+            
+            blurLayer.style.bottom = sliderY.value + '%';
+            blurLayer.style.height = sliderHeight.value + 'px';
+            workspaceZone.scrollIntoView({ behavior: 'smooth' });
         });
 
         window.syncEditText = function(inputEl) {
@@ -567,33 +584,32 @@
             activeSubData[idx].text = inputEl.value;
         };
 
-        // PHÁT GIỌNG ĐỌC AI TIẾNG VIỆT THAY THẾ CHO ÂM THANH GỐC (STYLE YOUTUBE)
-        function speakVietnameseSub(text) {
+        // PHẦN AUTO ĐỌC PHỤ ĐỀ (TTS) - KHỚP VỚI TIMELINE CŨ
+        function speakSubRealtime(text) {
             if (!('speechSynthesis' in window)) return;
-            
-            window.speechSynthesis.cancel(); // Tắt câu cũ lập tức để không bị đọc chồng âm
+            window.speechSynthesis.cancel(); // Triệt tiêu tiếng đọc cũ ngay lập tức tránh chồng chéo âm
 
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'vi-VN'; 
+            utterance.lang = 'vi-VN'; // Cài mặc định giọng đọc Việt Nam
             
             const voices = window.speechSynthesis.getVoices();
             const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VI'));
             if(viVoice) utterance.voice = viVoice;
 
-            utterance.rate = 1.15; // Tốc độ đọc chuẩn tự nhiên, hơi nhanh nhẹ để khớp cảnh phim
+            utterance.rate = parseFloat(ttsRate.value); // Đồng bộ tốc độ từ cấu hình người dùng chọn
             utterance.pitch = 1.0; 
             
             window.speechSynthesis.speak(utterance);
         }
 
-        // THEO DÕI VIDEO CHẠY: CẬP NHẬT PHỤ ĐỀ & KÍCH HOẠT GIỌNG ĐỌC THUYẾT MINH AI
+        // LẮNG NGHE VIDEO CHẠY ĐỂ HIỂN THỊ PHỤ ĐỀ ĐÈ THANH XÁM & PHÁT TIẾNG ĐỌC AI
         mainVideo.addEventListener('timeupdate', () => {
-            applyAudioSettings(); // Đảm bảo luôn tắt tiếng video gốc khi chạy
-            
+            applyAudioSettings();
             const currentTime = mainVideo.currentTime;
             let currentText = "";
             let currentIdx = -1;
 
+            // Dò tìm chính xác xem giây hiện tại của video thuộc về câu phụ đề nào
             activeSubData.forEach((sub, index) => {
                 if (currentTime >= sub.start && currentTime <= sub.end) {
                     currentText = sub.text;
@@ -601,15 +617,16 @@
                 }
             });
 
+            // Ghi đè chữ phụ đề mới lên trên lớp che phủ màu xám
             liveSubText.innerText = currentText;
 
-            // Nếu nhảy sang câu phụ đề dịch mới -> Bật giọng đọc thuyết minh AI thay thế âm thanh gốc
+            // Kiểm tra nếu video chạy nhảy sang câu sub tiếp theo thì bắt đầu đọc tự động câu đó luôn
             if (currentIdx !== -1 && currentIdx !== lastSpokenIndex) {
                 lastSpokenIndex = currentIdx;
-                speakVietnameseSub(currentText);
+                speakSubRealtime(currentText);
             }
             
-            // Nếu nằm ngoài vùng phụ đề thì ngắt hẳn giọng đọc
+            // Nếu khoảng trống video không có sub thì lập tức tắt tiếng đọc AI
             if (currentIdx === -1) {
                 lastSpokenIndex = -1;
                 if(window.speechSynthesis) window.speechSynthesis.cancel();
@@ -620,25 +637,30 @@
             if (window.speechSynthesis) window.speechSynthesis.cancel();
         });
 
-        // XUẤT FILE PHỤ ĐỀ
+        // XUẤT FILE PHỤ ĐỀ MỚI (.SRT)
         document.getElementById('downloadSrt').addEventListener('click', function() {
             let srtContent = '';
             activeSubData.forEach((item, index) => {
-                srtContent += `${index + 1}\n00:00:0${item.start},000 --> 00:00:0${item.end},000\n${item.text}\n\n`;
+                let formatTime = (seconds) => {
+                    let date = new Date(null);
+                    date.setSeconds(seconds);
+                    let ms = Math.floor((seconds % 1) * 1000).toString().padStart(3, '0');
+                    return date.toISOString().substr(11, 8) + ',' + ms;
+                };
+                srtContent += `${index + 1}\n${formatTime(item.start)} --> ${formatTime(item.end)}\n${item.text}\n\n`;
             });
             const blob = new Blob([srtContent], { type: 'text/srt;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "auto_translated_viet.srt";
+            link.download = "auto_translated.srt";
             link.click();
         });
 
-        // KẾT XUẤT VIDEO HOÀN CHỈNH
         document.getElementById('exportVideo').addEventListener('click', function() {
-            alert("Hệ thống đã tích hợp thành công: Thanh xám che sub cũ + Tách bỏ hoàn toàn âm thanh gốc + Nhúng giọng đọc thuyết minh AI tiếng Việt! Đang tải video hoàn thiện về máy.");
+            alert("Hệ thống đã đồng bộ hóa cục bộ: Đã tắt âm thanh gốc + Nhúng chữ phụ đề mới trên lớp che xám + Giọng đọc thuyết minh AI khớp trục thời gian!");
             const link = document.createElement("a");
             link.href = mainVideo.src;
-            link.download = "video_youtube_vietsub_tts.mp4";
+            link.download = "output_review_phim.mp4";
             link.click();
         });
 
