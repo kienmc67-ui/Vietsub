@@ -229,6 +229,9 @@
             <p id="uploadText">👉 CHẠM VÀO ĐÂY ĐỂ CHỌN VIDEO 👈</p>
         </div>
 
+        <!-- FIX: Thêm input file vào DOM -->
+        <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
+
         <div class="config-grid">
             <div class="select-box">
                 <label>Chữ gốc trên phim</label>
@@ -294,9 +297,7 @@
     <canvas id="captureCanvas"></canvas>
 
     <script>
-        const videoFileInput = document.createElement('input');
-        videoFileInput.type = 'file';
-        videoFileInput.accept = 'video/*';
+        const videoFileInput = document.getElementById('videoFileInput');
         
         const dropZone = document.getElementById('dropZone');
         const uploadText = document.getElementById('uploadText');
