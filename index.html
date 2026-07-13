@@ -171,7 +171,7 @@
             touch-action: none; /* FIX: đảm bảo tay cầm resize không bị trình duyệt cướp cử chỉ cuộn */
         }
 
-        /* CHỮ PHỤ ĐỀ VIỆTSUB TO RÕ RÀNG - vị trí giờ được JS đồng bộ 100% theo thanh che */
+        /* CHỮ PHỤ ĐỀ VIỆTSUB TO RÕ RÀNG */
         .live-vietsub-overlay {
             position: absolute;
             left: 2%;
@@ -217,7 +217,7 @@
 
     <div class="container">
         <h2>AI Director Vision Mobile V3</h2>
-        <div class="subtitle">Bản sửa lỗi: Phụ đề dịch bám sát 100% theo thanh che khi kéo/resize</div>
+        <div class="subtitle">Bản sửa lỗi: Nhận diện đa ngôn ngữ & chuẩn hóa Unicode</div>
 
         <div class="upload-zone" id="dropZone">
             <p id="uploadText">👉 CHẠM VÀO ĐÂY ĐỂ CHỌN VIDEO 👈</p>
@@ -227,8 +227,8 @@
             <div class="select-box">
                 <label>Chữ gốc trên phim</label>
                 <select id="ocrLang">
+                    <option value="chi_sim">Tiếng Trung (Giản thể)</option>
                     <option value="eng">Tiếng Anh (English)</option>
-                    <option value="chi_sim">Tiếng Trung</option>
                     <option value="jpn">Tiếng Nhật</option>
                 </select>
             </div>
@@ -311,9 +311,6 @@
         let lastLoggedText = "";
         let isProcessingFrame = false;
 
-        // ===== FIX CHÍNH: Đồng bộ phụ đề dịch bám sát 100% theo thanh che xám =====
-        // Mỗi lần thanh che di chuyển / đổi kích thước (kéo tay hoặc kéo slider),
-        // hàm này được gọi để dòng chữ dịch luôn nằm ĐÚNG vị trí và chiều cao của thanh che.
         function syncSubtitlePosition() {
             const barBottom = blurLayer.style.bottom || window.getComputedStyle(blurLayer).bottom;
             const barHeight = parseFloat(window.getComputedStyle(blurLayer).height);
@@ -321,7 +318,6 @@
             liveSubText.style.height = barHeight + 'px';
         }
 
-        // LOAD GIỌNG ĐỌC MOBILE TỰ ĐỘNG
         function loadVoices() {
             if (!('speechSynthesis' in window)) return;
             const voices = window.speechSynthesis.getVoices();
@@ -347,11 +343,14 @@
         }
         setTimeout(loadVoices, 600);
 
-        // KHỞI ĐỘNG AI OCR
         async function startOcrCore() {
             logOcr.innerText = "🤖 Đang tải bộ xử lý ảnh AI...";
-            ocrWorker = await Tesseract.createWorker(ocrLangSelect.value);
-            logOcr.innerText = "⚡ Hệ thống sẵn sàng! Bấm Play để dịch.";
+            try {
+                ocrWorker = await Tesseract.createWorker(ocrLangSelect.value);
+                logOcr.innerText = "⚡ Hệ thống sẵn sàng! Bấm Play để dịch.";
+            } catch(e) {
+                logOcr.innerText = "❌ Lỗi tải ngôn ngữ AI!";
+            }
         }
         startOcrCore();
 
@@ -360,7 +359,6 @@
             startOcrCore();
         });
 
-        // Chọn Video
         dropZone.addEventListener('click', () => videoFileInput.click());
         videoFileInput.addEventListener('change', function() {
             if(this.files.length > 0) {
@@ -370,10 +368,8 @@
             }
         });
 
-        // Khi video đã có kích thước hiển thị thật, đồng bộ lại vị trí phụ đề ngay
         mainVideo.addEventListener('loadedmetadata', syncSubtitlePosition);
 
-        // THUẬT TOÁN ĐA CHẠM (TOUCH) & CHUỘT (MOUSE) CHO MOBILE VÀ PC
         let isDragging = false, isResizing = false, yStart, startBottom, startHeight;
 
         function getClientY(e) {
@@ -415,31 +411,26 @@
                 }
             }
 
-            // FIX: bám theo ngay lập tức trong lúc đang kéo/resize, không đợi thả tay
             syncSubtitlePosition();
-
             if(e.cancelable) e.preventDefault();
         }
 
         function actionEnd() {
             isDragging = false;
             isResizing = false;
-            syncSubtitlePosition(); // đảm bảo vị trí cuối cùng khớp 100%
+            syncSubtitlePosition();
         }
 
-        // Gắn sự kiện chuột (PC)
         blurLayer.addEventListener('mousedown', (e) => actionStart(e, 'drag'));
         document.getElementById('resizeHandle').addEventListener('mousedown', (e) => actionStart(e, 'resize'));
         document.addEventListener('mousemove', actionMove);
         document.addEventListener('mouseup', actionEnd);
 
-        // Gắn sự kiện cảm ứng ngón tay (Mobile)
         blurLayer.addEventListener('touchstart', (e) => actionStart(e, 'drag'), { passive: false });
         document.getElementById('resizeHandle').addEventListener('touchstart', (e) => actionStart(e, 'resize'), { passive: false });
         document.addEventListener('touchmove', actionMove, { passive: false });
         document.addEventListener('touchend', actionEnd);
 
-        // Đồng bộ ngược từ thanh trượt input slider ra thanh xám + phụ đề dịch
         sliderY.addEventListener('input', function() {
             blurLayer.style.bottom = this.value + '%';
             syncSubtitlePosition();
@@ -449,10 +440,8 @@
             syncSubtitlePosition();
         });
 
-        // Gọi lần đầu để phụ đề khớp vị trí mặc định ngay khi trang tải xong
         syncSubtitlePosition();
 
-        // DỊCH GOOGLE
         async function executeTranslation(rawText) {
             try {
                 const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(rawText)}`;
@@ -462,7 +451,6 @@
             } catch (err) { return rawText; }
         }
 
-        // ĐỌC GIỌNG AI TIẾNG VIỆT
         function playTtsVoice(translatedText) {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel(); 
@@ -478,7 +466,6 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // VÒNG LẶP QUY ĐỔI ẢNH CHUẨN XÁC
         mainVideo.addEventListener('play', () => {
             mainVideo.muted = true;
 
@@ -503,21 +490,23 @@
                     0, 0, mainVideo.videoWidth, cropHeight
                 );
 
-                // Bộ lọc làm nét chữ high-contrast cho mobile chống quét rác chữ
                 try {
                     let imgData = ctx.getImageData(0, 0, canvas.width, cropHeight);
                     let data = imgData.data;
+                    
+                    // FIX: Đổi sang bộ lọc xám mượt, giữ nguyên nét chữ mảnh của Tiếng Trung/Nhật
                     for (let i = 0; i < data.length; i += 4) {
                         let brightness = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-                        let finalColor = (brightness > 135) ? 255 : 0;
-                        data[i] = finalColor; data[i+1] = finalColor; data[i+2] = finalColor;
+                        data[i] = brightness; data[i+1] = brightness; data[i+2] = brightness;
                     }
                     ctx.putImageData(imgData, 0, 0);
 
                     const { data: { text } } = await ocrWorker.recognize(canvas);
-                    let filteredText = text.replace(/[^a-zA-Z0-9\sÀ-ỹ]/g, '').replace(/\s+/g, ' ').trim();
+                    
+                    // FIX: Sử dụng regex Unicode toàn cầu (\p{L} giữ lại mọi loại chữ của tất cả quốc gia)
+                    let filteredText = text.replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
 
-                    if (filteredText.length > 2 && filteredText !== lastLoggedText) {
+                    if (filteredText.length >= 1 && filteredText !== lastLoggedText) {
                         lastLoggedText = filteredText;
                         logOcr.innerText = `🔍 AI Đang đọc chữ: "${filteredText.substring(0, 25)}..."`;
 
@@ -536,12 +525,6 @@
 
         mainVideo.addEventListener('pause', () => {
             clearInterval(scanTimer);
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
-        });
-
-        mainVideo.addEventListener('seeking', () => {
-            liveSubText.innerText = "...";
-            lastLoggedText = "";
             if (window.speechSynthesis) window.speechSynthesis.cancel();
         });
     </script>
