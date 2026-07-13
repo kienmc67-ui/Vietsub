@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CueLingo — Phụ đề AI đa ngôn ngữ (Full App)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12151a;
+    --panel:#1b1f27;
+    --panel-2:#20242d;
+    --paper:#ece9e2;
+    --cue:#f2c14e;
+    --teal:#3fbfad;
+    --muted:#8890a0;
+    --line:#2a2f3a;
+    --danger:#ff4a4a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter', sans-serif;
+    overflow-x:hidden;
+  }
+  h1,h2,h3, .display{
+    font-family:'Archivo Expanded', sans-serif;
+    font-weight:800;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+  a{ color:inherit; text-decoration:none; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 28px; }
+
+  /* NAV */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(18,21,26,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; }
+  .logo{ display:flex; align-items:center; gap:10px; font-family:'Archivo Expanded'; font-weight:800; font-size:19px; cursor:pointer; }
+  .logo .mark{
+    width:30px; height:30px; border-radius:7px;
+    background:var(--cue); color:#12151a;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:800; font-family:'JetBrains Mono';
+    position:relative;
+  }
+  .mark::after{
+    content:''; position:absolute; bottom:5px; left:6px; right:6px; height:3px;
+    background:#12151a; border-radius:2px; opacity:0.35;
+  }
+  .navlinks{ display:flex; gap:34px; font-size:14.5px; color:var(--muted); }
+  .navlinks a:hover{ color:var(--paper); }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:11px 20px; border-radius:8px;
+    font-size:14.5px; font-weight:600; cursor:pointer; border:none;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{ background:var(--cue); color:#12151a; }
+  .btn-ghost{ background:transparent; color:var(--paper); border:1px solid var(--line); }
+  .btn-danger{ background:var(--danger); color:white; }
+  .navcta{ display:flex; gap:12px; align-items:center; }
+
+  /* HERO */
+  .hero{ padding:96px 0 70px; }
+  .hero-grid{ display:grid; grid-template-columns:1.05fr 1fr; gap:56px; align-items:center; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono'; font-size:12.5px; color:var(--teal);
+    background:rgba(63,191,173,0.1); border:1px solid rgba(63,191,173,0.3);
+    padding:6px 12px; border-radius:20px; margin-bottom:22px;
+  }
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--teal); }
+  .hero h1{ font-size:52px; margin-bottom:20px; }
+  .hero h1 span{ color:var(--cue); }
+  .hero p.lead{ font-size:17.5px; color:var(--muted); max-width:480px; line-height:1.6; margin-bottom:32px; }
+  .hero-actions{ display:flex; gap:14px; margin-bottom:36px; }
+  .hero-meta{ display:flex; gap:26px; font-size:13px; color:var(--muted); font-family:'JetBrains Mono'; }
+  .hero-meta b{ color:var(--paper); font-family:'Inter'; font-weight:700; display:block; font-size:20px; }
+
+  /* SIGNATURE: subtitle demo frame */
+  .frame{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    overflow:hidden; box-shadow:0 30px 70px -30px rgba(0,0,0,0.6);
+  }
+  .frame-top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono'; font-size:11.5px; color:var(--muted);
+  }
+  .frame-top .dots{ display:flex; gap:6px; }
+  .frame-top .dots span{ width:8px; height:8px; border-radius:50%; background:#3a4050; }
+  .video-area{
+    position:relative; aspect-ratio:16/10; background:
+      radial-gradient(circle at 30% 20%, #262c38, #14171d 65%);
+    display:flex; align-items:flex-end; justify-content:center; padding:22px;
+  }
+  .video-area::before{
+    content:''; position:absolute; inset:0; opacity:0.5;
+    background-image:repeating-linear-gradient(90deg, transparent 0 38px, rgba(255,255,255,0.02) 38px 39px);
+  }
+  .waveform{ position:absolute; top:20px; left:22px; right:22px; display:flex; gap:3px; align-items:flex-end; height:34px; opacity:0.5;}
+  .waveform i{ flex:1; background:var(--teal); border-radius:2px; animation:wave 1.4s ease-in-out infinite; }
+  @keyframes wave{ 0%,100%{ height:20%; } 50%{ height:90%; } }
+  .subtitle-bar{
+    background:rgba(10,11,14,0.88); border:1px solid rgba(242,193,78,0.25);
+    padding:10px 18px; border-radius:8px; text-align:center; max-width:92%;
+    position:relative; z-index:2;
+  }
+  .subtitle-bar .line{ font-size:16.5px; font-weight:600; min-height:24px; }
+  .subtitle-bar .tc{ font-family:'JetBrains Mono'; font-size:11px; color:var(--cue); margin-top:6px; letter-spacing:0.02em; }
+  .frame-bottom{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted);
+  }
+  .lang-pill{
+    font-family:'JetBrains Mono'; background:var(--panel-2); border:1px solid var(--line);
+    padding:5px 10px; border-radius:6px; font-size:11.5px; color:var(--paper);
+  }
+
+  /* formats row */
+  .formats{ padding:34px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .formats .wrap{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+  .formats-label{ font-size:12.5px; color:var(--muted); font-family:'JetBrains Mono'; }
+  .format-list{ display:flex; gap:28px; flex-wrap:wrap; }
+  .format-list span{ font-family:'JetBrains Mono'; font-size:13px; color:var(--muted); border:1px solid var(--line); padding:6px 12px; border-radius:6px; }
+
+  /* SECTION generic */
+  section{ padding:96px 0; }
+  .section-head{ max-width:600px; margin-bottom:56px; }
+  .kicker{ font-family:'JetBrains Mono'; font-size:12.5px; color:var(--teal); margin-bottom:14px; display:block; }
+  .section-head h2{ font-size:36px; margin-bottom:14px; }
+  .section-head p{ color:var(--muted); font-size:16px; line-height:1.6; }
+
+  /* HOW IT WORKS */
+  .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .step{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px; position:relative;}
+  .step .num{ font-family:'JetBrains Mono'; color:var(--cue); font-size:13px; margin-bottom:18px; display:block; }
+  .step h3{ font-size:20px; margin-bottom:10px; font-family:'Inter'; font-weight:700;}
+  .step p{ color:var(--muted); font-size:14.5px; line-height:1.55; }
+  .step-line{ position:absolute; top:32px; right:-24px; width:24px; height:1px; background:var(--line); }
+  .step:last-child .step-line{ display:none; }
+
+  /* FEATURES */
+  .features{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .feature{ background:var(--panel); padding:32px 28px; }
+  .feature .icon{ width:38px; height:38px; border-radius:9px; background:var(--panel-2); display:flex; align-items:center; justify-content:center; margin-bottom:18px; color:var(--teal); font-size:17px; }
+  .feature h3{ font-size:16.5px; font-family:'Inter'; font-weight:700; margin-bottom:8px; }
+  .feature p{ color:var(--muted); font-size:14px; line-height:1.55; }
+
+  /* MARQUEE */
+  .marquee-wrap{ overflow:hidden; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:22px 0; background:var(--panel); }
+  .marquee{ display:flex; gap:44px; width:max-content; animation:scroll 26s linear infinite; }
+  .marquee span{ font-family:'JetBrains Mono'; font-size:14px; color:var(--muted); white-space:nowrap; }
+  .marquee span b{ color:var(--cue); }
+  @keyframes scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  /* PRICING */
+  .pricing{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .plan{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:32px; display:flex; flex-direction:column; }
+  .plan.pro{ border-color:var(--cue); position:relative; }
+  .plan.pro::before{ content:'PHỔ BIẾN NHẤT'; position:absolute; top:-12px; left:28px; background:var(--cue); color:#12151a; font-family:'JetBrains Mono'; font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:5px; letter-spacing:0.03em; }
+  .plan h3{ font-size:19px; margin-bottom:6px; font-family:'Inter'; font-weight:700; }
+  .plan .price{ font-family:'Archivo Expanded'; font-size:34px; margin:14px 0 4px; }
+  .plan .price span{ font-family:'Inter'; font-size:13px; color:var(--muted); font-weight:400; }
+  .plan .desc{ color:var(--muted); font-size:13.5px; margin-bottom:22px; }
+  .plan ul{ list-style:none; margin-bottom:26px; flex:1; }
+  .plan li{ font-size:14px; color:var(--paper); padding:8px 0; border-top:1px solid var(--line); display:flex; gap:10px; align-items:flex-start; }
+  .plan li:first-child{ border-top:none; }
+  .plan li::before{ content:'✓'; color:var(--teal); font-weight:700; }
+
+  /* CTA FOOTER */
+  .cta-band{ background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:64px; text-align:center; }
+  .cta-band h2{ font-size:34px; margin-bottom:14px; }
+  .cta-band p{ color:var(--muted); margin-bottom:30px; }
+
+  footer{ border-top:1px solid var(--line); padding:44px 0; }
+  .footer-grid{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px; color:var(--muted); font-size:13.5px; }
+
+  .reveal{ opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  /* ==========================================================================
+     APP WORKSPACE MODAL & PROCESSING LAYERS (NÂNG CẤP MỚI)
+     ========================================================================== */
+  
+  /* Ẩn input file mặc định */
+  #video-uploader { display: none; }
+
+  /* Màn hình loading giả lập AI xử lý */
+  #ai-loading-screen {
+    position: fixed; inset: 0; background: rgba(18, 21, 26, 0.95);
+    z-index: 9999; display: none; align-items: center; justify-content: center;
+    flex-direction: column; text-align: center;
+  }
+  .spinner {
+    width: 60px; height: 60px; border: 4px solid var(--line);
+    border-top: 4px solid var(--cue); border-radius: 50%;
+    animation: spin 1s linear infinite; margin-bottom: 24px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  #loading-status { font-family: 'JetBrains Mono'; color: var(--teal); font-size: 14px; margin-top: 12px; }
+
+  /* Toàn bộ không gian làm việc Workspace */
+  #app-workspace {
+    position: fixed; inset: 0; background: var(--ink); z-index: 999;
+    display: none; flex-direction: column;
+  }
+  .workspace-header {
+    display: flex; align-items:center; justify-content: space-between;
+    padding: 14px 28px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .workspace-body {
+    display: grid; grid-template-columns: 1.2fr 1fr; flex: 1; overflow: hidden;
+  }
+  
+  /* Cột trái: Trình phát video */
+  .workspace-left {
+    padding: 24px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; background: #0e1115; border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .video-container {
+    position: relative; width: 100%; max-width: 720px; aspect-ratio: 16/9;
+    background: black; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
+  }
+  .video-container video { width: 100%; height: 100%; object-fit: contain; }
+  
+  /* Lớp phủ phụ đề cứng thời gian thực trên video */
+  .video-sub-overlay {
+    position: absolute; bottom: 10%; left: 5%; right: 5%; text-align: center;
+    pointer-events: none; z-index: 10;
+  }
+  .video-sub-text {
+    display: inline-block; background: rgba(0,0,0,0.75); color: #fff;
+    padding: 6px 16px; border-radius: 6px; font-size: 18px; font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.1); max-width: 90%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .video-sub-text span.highlight { color: var(--cue); }
+
+  /* Cột phải: Trình biên tập phụ đề */
+  .workspace-right {
+    display: flex; flex-direction: column; height: 100%; background: var(--panel);
+  }
+  .workspace-right-top {
+    padding: 16px 24px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sub-list {
+    flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .sub-block {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 14px; display: flex; flex-direction: column;
+    gap: 8px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .sub-block:hover { border-color: #444; }
+  .sub-block.active { border-color: var(--cue); background: rgba(242,193,78,0.03); }
+  .sub-block-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono'; font-size: 11.5px; color: var(--muted);
+  }
+  .sub-block-meta .time { color: var(--teal); }
+  .sub-input {
+    background: var(--ink); border: 1px solid var(--line); color: var(--paper);
+    padding: 8px 12px; border-radius: 6px; font-family: inherit; font-size: 14px;
+    width: 100%; outline: none; transition: border-color 0.2s;
+  }
+  .sub-input:focus { border-color: var(--teal); }
+
+  @media (max-width:920px){
+    .hero-grid, .steps, .features, .pricing, .workspace-body{ grid-template-columns: 1fr; }
+    .hero h1{ font-size:38px; }
+    .navlinks{ display:none; }
+    .cta-band{ padding:40px 24px; }
+    .workspace-body { overflow-y: auto; }
+    .workspace-right { height: 500px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- INPUT FILE ẨN ĐỂ TRIGGER CHỌN VIDEO -->
+<input type="file" id="video-uploader" accept="video/mp4, video/webm, video/ogg, video/quicktime">
+
+<!-- MÀN HÌNH GIẢ LẬP XỬ LÝ AI -->
+<div id="ai-loading-screen">
+  <div class="spinner"></div>
+  <h2 style="font-size:24px; margin-bottom:8px;">AI ĐANG XỬ LÝ VIDEO CỦA BẠN</h2>
+  <p style="color:var(--muted); max-width:400px; font-size:14px; line-height:1.5;">Hệ thống đang trích xuất luồng âm thanh, chạy mô hình nhận diện giọng nói và tự động dịch thuật dịch sang ngôn ngữ đích...</p>
+  <div id="loading-status">Đang tải tệp lên: 0%</div>
+</div>
+
+<!-- WORKSPACE CHÍNH (GIAO DIỆN EDIT NHƯ GENSUB) -->
+<div id="app-workspace">
+  <div class="workspace-header">
+    <div class="logo" onclick="closeWorkspace()"><span class="mark">CL</span>CueLingo <span style="font-size:12px; color:var(--teal); margin-left:8px; font-family:'JetBrains Mono'; font-weight:normal;">[Workspace]</span></div>
+    <div style="font-size:14px; font-family:'JetBrains Mono';" id="workspace-filename">video.mp4</div>
+    <div class="navcta">
+      <button class="btn btn-ghost" onclick="closeWorkspace()">Đóng bản xem thử</button>
+      <button class="btn btn-primary" onclick="exportSRT()">Xuất File (.SRT)</button>
+    </div>
+  </div>
+  <div class="workspace-body">
+    <!-- BÊN TRÁI: VIDEO PLAYER + SUB OVERLAY -->
+    <div class="workspace-left">
+      <div class="video-container">
+        <video id="main-video" controls></video>
+        <div class="video-sub-overlay">
+          <div class="video-sub-text" id="live-sub">Bấm Play để xem phụ đề đồng bộ</div>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:16px; font-family:'JetBrains Mono'; text-align:center;">
+        💡 Mẹo: Bạn có thể sửa trực tiếp nội dung chữ ở cột bên phải. Phụ đề trên video sẽ cập nhật ngay!
+      </p>
+    </div>
+    <!-- BÊN PHẢI: TIMELINE DANH SÁCH PHỤ ĐỀ CHỈNH SỬA -->
+    <div class="workspace-right">
+      <div class="workspace-right-top">
+        <h3 style="font-size:16px;">Bản dịch & Khung thời gian</h3>
+        <select id="workspace-lang-select" style="background:var(--panel-2); color:white; border:1px solid var(--line); padding:6px 12px; border-radius:6px; font-family:'JetBrains Mono'; cursor:pointer;">
+          <option value="VI">Tiếng Việt (VI)</option>
+          <option value="EN">English (EN)</option>
+          <option value="JA">日本語 (JA)</option>
+        </select>
+      </div>
+      <div class="sub-list" id="sub-list-container">
+        <!-- JS SẼ ĐỔ CÁC BLOCK PHỤ ĐỀ VÀO ĐÂY -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     LANDING PAGE GỐC (GIỮ NGUYÊN GIAO DIỆN PREMIUM CỦA BẠN)
+     ========================================================================== -->
+<div id="landing-page-view">
+  <header>
+    <div class="wrap">
+      <nav>
+        <div class="logo"><span class="mark">CL</span>CueLingo</div>
+        <div class="navlinks">
+          <a href="#features">Tính năng</a>
+          <a href="#how">Cách hoạt động</a>
+          <a href="#pricing">Bảng giá</a>
+        </div>
+        <div class="navcta">
+          <a class="btn btn-ghost" href="#">Đăng nhập</a>
+          <button class="btn btn-primary trigger-upload">Dùng thử miễn phí</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> Hỗ trợ 60+ ngôn ngữ</div>
+        <h1>Video của bạn,<br><span>nói được mọi ngôn ngữ.</span></h1>
+        <p class="lead">Tải video lên, CueLingo tự động nhận diện lời thoại, dịch và đồng bộ phụ đề theo từng khung hình — chỉ trong vài phút, không cần dựng tay.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary trigger-upload">Tải video lên ứng dụng</button>
+          <a class="btn btn-ghost" href="#how">Xem cách hoạt động</a>
+        </div>
+        <div class="hero-meta">
+          <div><b>60+</b>ngôn ngữ</div>
+          <div><b>98%</b>độ chính xác</div>
+          <div><b>&lt;5 phút</b>cho video 30p</div>
+        </div>
+      </div>
+
+      <div class="frame reveal">
+        <div class="frame-top">
+          <span>demo.mp4</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="video-area">
+          <div class="waveform" id="waveform"></div>
+          <div class="subtitle-bar">
+            <div class="line" id="subtitle-line">Xin chào, đây là bản demo.</div>
+            <div class="tc" id="subtitle-tc">00:00:12,340 → 00:00:14,120</div>
+          </div>
+        </div>
+        <div class="frame-bottom">
+          <span>Đang dịch sang <span class="lang-pill" id="lang-pill">VI</span></span>
+          <span>1080p · 29.97fps</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="formats">
+    <div class="wrap">
+      <span class="formats-label">ĐỊNH DẠNG HỖ TRỢ</span>
+      <div class="format-list">
+        <span>.MP4</span><span>.MOV</span><span>.MKV</span><span>.SRT</span><span>.VTT</span><span>.ASS</span><span>.MP3</span><span>.WAV</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">QUY TRÌNH</span>
+        <h2>Ba bước, không cần dựng tay.</h2>
+        <p>Từ file gốc đến phụ đề hoàn chỉnh — CueLingo xử lý toàn bộ khâu nghe, dịch và canh thời gian.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="num">01 / TẢI LÊN</span>
+          <h3>Đưa video hoặc audio vào</h3>
+          <p>Kéo thả file MP4, MOV, MP3 hoặc WAV — hoặc dán link video trực tiếp.</p>
+          <div class="step-line"></div>
+        </div>
+        <div class="step revea
